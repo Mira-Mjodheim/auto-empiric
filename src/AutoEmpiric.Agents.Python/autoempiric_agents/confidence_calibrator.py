@@ -41,4 +41,3 @@ class ConfidenceCalibrator:
     def reset(self, initial_confidence: float = 1.0) -> None:
         self.current_confidence = initial_confidence
         self.history.clear()
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

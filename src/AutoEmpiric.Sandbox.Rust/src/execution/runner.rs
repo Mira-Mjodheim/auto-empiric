@@ -1,5 +1,5 @@
 use std::io::{self, Read};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -39,7 +39,7 @@ impl ProcessRunner {
     pub fn run(&self) -> io::Result<ExecutionResult> {
         let mut command = Command::new(&self.executable);
         command.args(&self.arguments);
-        
+
         if let Some(ref dir) = self.working_directory {
             command.current_dir(dir);
         }
@@ -48,10 +48,8 @@ impl ProcessRunner {
         command.stderr(Stdio::piped());
 
         let mut child = command.spawn()?;
-
         let mut stdout_stream = child.stdout.take().expect("Failed to capture standard output");
         let mut stderr_stream = child.stderr.take().expect("Failed to capture standard error");
-
         let (sender, receiver) = mpsc::channel();
 
         thread::spawn(move || {
@@ -85,17 +83,41 @@ impl ProcessRunner {
 
         match receiver.recv_timeout(self.timeout) {
             Ok(res) => Ok(res),
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                Ok(ExecutionResult {
-                    exit_code: None,
-                    stdout: String::new(),
-                    stderr: String::from("Process execution timed out."),
-                })
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                Err(io::Error::new(io::ErrorKind::Other, "Internal runner error: channel disconnected"))
-            }
+            Err(mpsc::RecvTimeoutError::Timeout) => Ok(ExecutionResult {
+                exit_code: None,
+                stdout: String::new(),
+                stderr: String::from("Process execution timed out."),
+            }),
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Internal runner error: channel disconnected",
+            )),
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.
+
+pub fn execute_in_sandbox(command: &mut Command, timeout: Duration) -> io::Result<Output> {
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+
+    let child = command.spawn()?;
+    let child_id = child.id();
+    let (sender, receiver) = mpsc::channel();
+
+    thread::spawn(move || {
+        let result = child.wait_with_output();
+        let _ = sender.send(result);
+    });
+
+    match receiver.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            let _ = Command::new("kill").arg("-9").arg(child_id.to_string()).status();
+            Err(io::Error::new(io::ErrorKind::TimedOut, "Process execution timed out."))
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Internal runner error: channel disconnected",
+        )),
+    }
+}

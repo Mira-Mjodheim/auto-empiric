@@ -2,6 +2,9 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic;
 
+pub mod execution;
+pub mod isolation;
+
 #[no_mangle]
 pub extern "C" fn execute_in_sandbox(code: *const c_char) -> *mut c_char {
     let result = panic::catch_unwind(|| {
@@ -15,8 +18,7 @@ pub extern "C" fn execute_in_sandbox(code: *const c_char) -> *mut c_char {
             Err(_) => return String::from("Execution failed: invalid UTF-8 payload"),
         };
 
-        let execution_result = format!("Sandbox execution successful. Payload size: {} bytes", code_str.len());
-        execution_result
+        format!("Sandbox execution successful. Payload size: {} bytes", code_str.len())
     });
 
     let final_result = match result {
@@ -38,4 +40,3 @@ pub extern "C" fn free_sandbox_string(s: *mut c_char) {
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

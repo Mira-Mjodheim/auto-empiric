@@ -23,8 +23,7 @@ namespace AutoEmpiric.Core.Interfaces
         AgentState State { get; }
 
         Task InitializeAsync(CancellationToken cancellationToken = default);
-        Task ExecuteAsync(CancellationToken cancellationToken = default);
+        Task<string> GenerateAsync(string taskDefinition, CancellationToken cancellationToken = default);
         Task TerminateAsync(CancellationToken cancellationToken = default);
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

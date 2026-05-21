@@ -5,17 +5,23 @@ namespace AutoEmpiric.Core.Models
 {
     public class ValidationResult
     {
-        public bool IsSuccess { get; set; }
+        public bool IsValid { get; set; }
+        public bool IsSuccess
+        {
+            get => IsValid;
+            set => IsValid = value;
+        }
         public string Message { get; set; } = string.Empty;
         public string ErrorDetails { get; set; } = string.Empty;
         public Dictionary<string, double> Metrics { get; set; } = new Dictionary<string, double>();
+        public ConfidenceScore Confidence { get; set; } = new ConfidenceScore();
         public DateTime ExecutionTime { get; set; } = DateTime.UtcNow;
 
         public static ValidationResult CreateSuccess(string message)
         {
             return new ValidationResult
             {
-                IsSuccess = true,
+                IsValid = true,
                 Message = message
             };
         }
@@ -24,7 +30,7 @@ namespace AutoEmpiric.Core.Models
         {
             return new ValidationResult
             {
-                IsSuccess = false,
+                IsValid = false,
                 Message = errorMessage,
                 ErrorDetails = details
             };
@@ -43,4 +49,3 @@ namespace AutoEmpiric.Core.Models
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

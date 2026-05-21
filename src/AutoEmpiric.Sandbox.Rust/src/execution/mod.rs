@@ -1,5 +1,7 @@
-use std::process::{Command, Output, Stdio};
+pub mod runner;
+
 use std::io::{Error, ErrorKind, Result};
+use std::process::{Command, Output, Stdio};
 
 pub struct ExecutionContext {
     binary_path: String,
@@ -33,4 +35,3 @@ impl ExecutionContext {
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

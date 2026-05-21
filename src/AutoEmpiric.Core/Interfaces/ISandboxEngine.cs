@@ -7,6 +7,7 @@ namespace AutoEmpiric.Core.Interfaces
     public interface ISandboxEngine : IAsyncDisposable, IDisposable
     {
         Task InitializeAsync(CancellationToken cancellationToken = default);
+        Task<SandboxExecutionResponse> RunAsync(string generatedArtifact, CancellationToken cancellationToken = default);
         Task<SandboxExecutionResponse> ExecuteAsync(string command, CancellationToken cancellationToken = default);
         Task<SandboxExecutionResponse> RunScriptAsync(string scriptContent, string language, CancellationToken cancellationToken = default);
         Task TerminateAsync(CancellationToken cancellationToken = default);
@@ -21,4 +22,3 @@ namespace AutoEmpiric.Core.Interfaces
         public bool IsSuccess => ExitCode == 0;
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

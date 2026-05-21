@@ -1,7 +1,8 @@
+using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 using AutoEmpiric.Core.Interfaces;
 using AutoEmpiric.Core.Models;
+using Xunit;
 
 namespace AutoEmpiric.Core.Tests
 {
@@ -9,79 +10,64 @@ namespace AutoEmpiric.Core.Tests
     {
         private class EmpiricalValidator : IValidator
         {
-            private readonly ISandboxEngine _sandboxEngine;
+            public string Name => "TestEmpiricalValidator";
 
-            public EmpiricalValidator(ISandboxEngine sandboxEngine)
+            public Task<ValidationResult> AssessAsync(SandboxExecutionResponse executionResult, CancellationToken cancellationToken = default)
             {
-                _sandboxEngine = sandboxEngine;
-            }
-
-            public async Task<ValidationResult> ValidateAsync(string code)
-            {
-                var executionResult = await _sandboxEngine.ExecuteAsync(code);
-                
-                var result = new ValidationResult();
-                
-                if (executionResult != null && executionResult.Contains("EMPIRICAL_PROOF_VERIFIED"))
+                var verified = executionResult.StandardOutput.Contains("EMPIRICAL_PROOF_VERIFIED");
+                return Task.FromResult(new ValidationResult
                 {
-                    result.IsValid = true;
-                }
-                else
-                {
-                    result.IsValid = false;
-                }
-
-                return result;
-            }
-        }
-
-        private class TestSandboxEngine : ISandboxEngine
-        {
-            private readonly string _simulatedOutput;
-
-            public TestSandboxEngine(string simulatedOutput)
-            {
-                _simulatedOutput = simulatedOutput;
+                    IsValid = executionResult.IsSuccess && verified,
+                    Message = verified ? "Proof verified." : "Proof marker missing."
+                });
             }
 
-            public Task<string> ExecuteAsync(string code)
-            {
-                return Task.FromResult(_simulatedOutput);
-            }
+            public bool SupportsContext(string contextType) => contextType == "sandbox";
         }
 
         [Fact]
-        public async Task ValidateAsync_WhenSandboxOutputContainsEmpiricalProof_ShouldReturnValid()
+        public async Task AssessAsync_WhenSandboxOutputContainsEmpiricalProof_ShouldReturnValid()
         {
-            var sandbox = new TestSandboxEngine("Execution started\nEMPIRICAL_PROOF_VERIFIED\nExecution completed");
-            var validator = new EmpiricalValidator(sandbox);
+            var validator = new EmpiricalValidator();
+            var response = new SandboxExecutionResponse
+            {
+                ExitCode = 0,
+                StandardOutput = "Execution started\nEMPIRICAL_PROOF_VERIFIED\nExecution completed"
+            };
 
-            var validationResult = await validator.ValidateAsync("test_code_payload");
+            var validationResult = await validator.AssessAsync(response);
 
             Assert.True(validationResult.IsValid);
         }
 
         [Fact]
-        public async Task ValidateAsync_WhenSandboxOutputLacksEmpiricalProof_ShouldReturnInvalid()
+        public async Task AssessAsync_WhenSandboxOutputLacksEmpiricalProof_ShouldReturnInvalid()
         {
-            var sandbox = new TestSandboxEngine("Execution started\nExecution completed");
-            var validator = new EmpiricalValidator(sandbox);
+            var validator = new EmpiricalValidator();
+            var response = new SandboxExecutionResponse
+            {
+                ExitCode = 0,
+                StandardOutput = "Execution started\nExecution completed"
+            };
 
-            var validationResult = await validator.ValidateAsync("test_code_payload");
+            var validationResult = await validator.AssessAsync(response);
 
             Assert.False(validationResult.IsValid);
         }
 
         [Fact]
-        public async Task ValidateAsync_WhenSandboxOutputContainsError_ShouldReturnInvalid()
+        public async Task AssessAsync_WhenSandboxOutputContainsError_ShouldReturnInvalid()
         {
-            var sandbox = new TestSandboxEngine("Execution started\nERROR: Compilation failed\nExecution completed");
-            var validator = new EmpiricalValidator(sandbox);
+            var validator = new EmpiricalValidator();
+            var response = new SandboxExecutionResponse
+            {
+                ExitCode = 1,
+                StandardError = "ERROR: Compilation failed"
+            };
 
-            var validationResult = await validator.ValidateAsync("test_code_payload");
+            var validationResult = await validator.AssessAsync(response);
 
             Assert.False(validationResult.IsValid);
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

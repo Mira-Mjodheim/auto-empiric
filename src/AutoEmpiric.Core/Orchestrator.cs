@@ -27,11 +27,10 @@ namespace AutoEmpiric.Core
             }
 
             var generatedArtifact = await _agent.GenerateAsync(taskDefinition, cancellationToken).ConfigureAwait(false);
-            var executionMetrics = await _sandboxEngine.RunAsync(generatedArtifact, cancellationToken).ConfigureAwait(false);
-            var result = await _validator.AssessAsync(executionMetrics, cancellationToken).ConfigureAwait(false);
+            var executionResult = await _sandboxEngine.RunAsync(generatedArtifact, cancellationToken).ConfigureAwait(false);
+            var result = await _validator.AssessAsync(executionResult, cancellationToken).ConfigureAwait(false);
 
             return result;
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.
