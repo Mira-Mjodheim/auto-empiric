@@ -9,4 +9,3 @@ openai>=1.3.0
 anthropic>=0.7.0
 httpx>=0.25.0
 python-dotenv>=1.0.0
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

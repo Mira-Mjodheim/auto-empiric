@@ -33,4 +33,3 @@ fn test_sandbox_execution_timeout() {
     let result = runner::execute_in_sandbox(&mut command, Duration::from_secs(1));
     assert!(result.is_err());
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

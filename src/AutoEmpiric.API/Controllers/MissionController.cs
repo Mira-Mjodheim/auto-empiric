@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using AutoEmpiric.Core;
 using AutoEmpiric.Core.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AutoEmpiric.API.Controllers;
 
@@ -27,7 +27,7 @@ public class MissionController : ControllerBase
 
         try
         {
-            ValidationResult result = await _orchestrator.ExecuteMissionAsync(request.ProblemDescription);
+            var result = await _orchestrator.ExecuteEmpiricalCycleAsync(request.ProblemDescription);
             return Ok(result);
         }
         catch (Exception ex)
@@ -41,4 +41,3 @@ public class MissionRequest
 {
     public string ProblemDescription { get; set; } = string.Empty;
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

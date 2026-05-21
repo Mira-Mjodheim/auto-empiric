@@ -1,2 +1,1 @@
 """Test suite for AutoEmpiric Python Agents."""
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

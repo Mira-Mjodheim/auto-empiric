@@ -6,6 +6,11 @@ namespace AutoEmpiric.Core.Models
     public class ConfidenceScore
     {
         public double Level { get; set; }
+        public double Score
+        {
+            get => Level;
+            set => Level = value;
+        }
         public double MarginOfError { get; set; }
         public string Justification { get; set; }
         public Dictionary<string, double> EvidenceWeights { get; set; }
@@ -41,7 +46,7 @@ namespace AutoEmpiric.Core.Models
 
             foreach (var kvp in EvidenceWeights)
             {
-                totalWeight += 1.0; 
+                totalWeight += 1.0;
                 weightedSum += kvp.Value;
             }
 
@@ -50,4 +55,3 @@ namespace AutoEmpiric.Core.Models
         }
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.

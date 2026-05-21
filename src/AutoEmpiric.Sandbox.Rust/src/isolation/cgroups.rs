@@ -9,11 +9,11 @@ pub struct CgroupManager {
 impl CgroupManager {
     pub fn new(cgroup_name: &str) -> io::Result<Self> {
         let path = Path::new("/sys/fs/cgroup").join(cgroup_name);
-        
+
         if !path.exists() {
             fs::create_dir_all(&path)?;
         }
-        
+
         Ok(Self { base_path: path })
     }
 
@@ -48,4 +48,20 @@ impl Drop for CgroupManager {
         let _ = self.remove();
     }
 }
-[WARNING] --raw-output is enabled. Model output is not sanitized and may contain harmful ANSI sequences (e.g. for phishing or command injection). Use --accept-raw-output-risk to suppress this warning.
+
+pub fn setup_cgroup(cgroup_name: &str, memory_mb: u64, cpu_quota: u64) -> io::Result<String> {
+    let manager = CgroupManager::new(cgroup_name)?;
+    manager.set_memory_limit(memory_mb * 1024 * 1024)?;
+    manager.set_cpu_limit(cpu_quota, 100_000)?;
+    let path = manager.base_path.to_string_lossy().to_string();
+    std::mem::forget(manager);
+    Ok(path)
+}
+
+pub fn cleanup_cgroup(cgroup_name: &str) -> io::Result<()> {
+    let path = Path::new("/sys/fs/cgroup").join(cgroup_name);
+    if path.exists() {
+        fs::remove_dir(path)?;
+    }
+    Ok(())
+}
