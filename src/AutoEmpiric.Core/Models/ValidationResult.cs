@@ -6,7 +6,8 @@ namespace AutoEmpiric.Core.Models
     public class ValidationResult
     {
         public bool IsValid { get; set; }
-        public bool IsSuccess
+        [Obsolete("Use IsValid instead. Will be removed in a future version.")]
+    public bool IsSuccess
         {
             get => IsValid;
             set => IsValid = value;
