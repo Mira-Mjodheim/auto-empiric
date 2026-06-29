@@ -1,42 +1,44 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoEmpiric.Core.Models
 {
     public class ConfidenceScore
     {
-        public double Level { get; set; }
-        public double Score
-        {
-            get => Level;
-            set => Level = value;
-        }
-        public double MarginOfError { get; set; }
-        public string Justification { get; set; }
-        public Dictionary<string, double> EvidenceWeights { get; set; }
+        private readonly Dictionary<string, (double Weight, double Certainty)> _evidence = new();
 
-        public ConfidenceScore()
+        public double Score { get; set; }
+
+        [Obsolete("Use Score instead. Will be removed in a future version.")]
+        public double Level
         {
-            EvidenceWeights = new Dictionary<string, double>();
-            Justification = string.Empty;
+            get => Score;
+            set => Score = value;
         }
+
+        public double MarginOfError { get; set; }
+        public string Justification { get; set; } = string.Empty;
+
+        public IReadOnlyDictionary<string, double> EvidenceWeights
+            => _evidence.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Weight * kvp.Value.Certainty);
 
         public void AdjustConfidence(string evidenceId, double weight, double certainty)
         {
-            if (string.IsNullOrWhiteSpace(evidenceId))
-            {
-                throw new ArgumentException("Evidence identifier cannot be null or whitespace.", nameof(evidenceId));
-            }
+            ArgumentException.ThrowIfNullOrWhiteSpace(evidenceId);
 
-            EvidenceWeights[evidenceId] = weight * certainty;
+            if (weight < 0) throw new ArgumentOutOfRangeException(nameof(weight), "Weight must be non-negative.");
+            if (certainty is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(certainty), "Certainty must be between 0 and 1.");
+
+            _evidence[evidenceId] = (weight, certainty);
             Recalculate();
         }
 
         private void Recalculate()
         {
-            if (EvidenceWeights.Count == 0)
+            if (_evidence.Count == 0)
             {
-                Level = 0.0;
+                Score = 0.0;
                 MarginOfError = 1.0;
                 return;
             }
@@ -44,14 +46,14 @@ namespace AutoEmpiric.Core.Models
             double totalWeight = 0;
             double weightedSum = 0;
 
-            foreach (var kvp in EvidenceWeights)
+            foreach (var (_, (w, c)) in _evidence)
             {
-                totalWeight += 1.0;
-                weightedSum += kvp.Value;
+                totalWeight += w;
+                weightedSum += w * c;
             }
 
-            Level = weightedSum / totalWeight;
-            MarginOfError = 1.0 - Level;
+            Score = totalWeight > 0 ? weightedSum / totalWeight : 0;
+            MarginOfError = 1.0 - Score;
         }
     }
 }

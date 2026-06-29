@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoEmpiric.Core.Interfaces;
@@ -17,22 +18,84 @@ namespace AutoEmpiric.Core.Services
             return ExecuteAsync(generatedArtifact, cancellationToken);
         }
 
-        public Task<SandboxExecutionResponse> ExecuteAsync(string command, CancellationToken cancellationToken = default)
+        public async Task<SandboxExecutionResponse> ExecuteAsync(string command, CancellationToken cancellationToken = default)
         {
-            var response = new SandboxExecutionResponse
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (string.IsNullOrWhiteSpace(command))
             {
-                ExitCode = string.IsNullOrWhiteSpace(command) ? 1 : 0,
-                StandardOutput = command ?? string.Empty,
-                StandardError = string.IsNullOrWhiteSpace(command) ? "Empty command." : string.Empty,
-                ExecutionDuration = TimeSpan.Zero
+                return new SandboxExecutionResponse
+                {
+                    ExitCode = 1,
+                    StandardOutput = string.Empty,
+                    StandardError = "Empty command.",
+                    ExecutionDuration = TimeSpan.Zero
+                };
+            }
+
+            var start = Stopwatch.StartNew();
+            var psi = new ProcessStartInfo("sh", $"-c \"{command.Replace("\"", "\\\"")}\"")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
             };
 
-            return Task.FromResult(response);
+            using var process = new Process { StartInfo = psi };
+            process.Start();
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(60));
+
+            try
+            {
+                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                return new SandboxExecutionResponse
+                {
+                    ExitCode = -1,
+                    StandardOutput = await stdoutTask.ConfigureAwait(false),
+                    StandardError = "Execution timed out after 60 seconds.",
+                    ExecutionDuration = start.Elapsed
+                };
+            }
+
+            var stdout = await stdoutTask.ConfigureAwait(false);
+            var stderr = await stderrTask.ConfigureAwait(false);
+
+            return new SandboxExecutionResponse
+            {
+                ExitCode = process.ExitCode,
+                StandardOutput = stdout,
+                StandardError = stderr,
+                ExecutionDuration = start.Elapsed
+            };
         }
 
         public Task<SandboxExecutionResponse> RunScriptAsync(string scriptContent, string language, CancellationToken cancellationToken = default)
         {
-            return ExecuteAsync(scriptContent, cancellationToken);
+            var interpreter = language?.ToLowerInvariant() switch
+            {
+                "python" or "py" => "python3",
+                "javascript" or "js" or "node" => "node",
+                "bash" or "sh" or "shell" => "bash",
+                "csharp" or "cs" or "dotnet" => "dotnet script",
+                _ => "sh"
+            };
+
+            var command = $"{interpreter} -e \"{scriptContent.Replace("\"", "\\\"")}\"";
+            return ExecuteAsync(command, cancellationToken);
         }
 
         public Task TerminateAsync(CancellationToken cancellationToken = default)
